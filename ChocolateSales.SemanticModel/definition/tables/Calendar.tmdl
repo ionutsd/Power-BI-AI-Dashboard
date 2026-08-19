@@ -1,0 +1,119 @@
+table Calendar
+	lineageTag: 081b910f-875d-43db-a176-e4280f96f033
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isKey
+		formatString: yyyy-mm-dd
+		lineageTag: 2a64aadf-d368-4e8c-bd1d-f712af527027
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Year
+		dataType: int64
+		formatString: 0
+		lineageTag: 2fa94a1a-a66f-4f48-b339-c9457c1ef478
+		summarizeBy: none
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quarter Number'
+		dataType: int64
+		formatString: 0
+		lineageTag: f15a3cf6-61ac-4cd9-97be-97dcbc83a01f
+		summarizeBy: none
+		sourceColumn: Quarter Number
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quarter
+		dataType: string
+		lineageTag: 9992bc8d-8d4c-46d9-83bb-cc5199bc7a91
+		summarizeBy: none
+		sourceColumn: Quarter
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Number'
+		dataType: int64
+		formatString: 0
+		lineageTag: f87e2a97-8a52-4a43-a64a-9e1606d161f7
+		summarizeBy: none
+		sourceColumn: Month Number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Name'
+		dataType: string
+		lineageTag: 1898c5e8-4a08-4dfd-a8b7-be7bc43e5f12
+		summarizeBy: none
+		sourceColumn: Month Name
+		sortByColumn: 'Month Number'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Year'
+		dataType: string
+		lineageTag: 4fb4bcc0-f366-4469-b070-d4d13775a688
+		summarizeBy: none
+		sourceColumn: Month Year
+		sortByColumn: 'Month Year Sort'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Year Sort'
+		dataType: int64
+		formatString: 0
+		lineageTag: bf9d920b-f712-4ea5-85a6-7fe5a7ce4ff3
+		summarizeBy: none
+		sourceColumn: Month Year Sort
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Day of Week Number'
+		dataType: int64
+		formatString: 0
+		lineageTag: 388243a6-7e86-4f57-8d65-00f0454efcaf
+		summarizeBy: none
+		sourceColumn: Day of Week Number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Day of Week'
+		dataType: string
+		lineageTag: 37eaf63a-60e3-4089-932b-2285a18137e2
+		summarizeBy: none
+		sourceColumn: Day of Week
+		sortByColumn: 'Day of Week Number'
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Calendar = m
+		mode: import
+		source = ```
+				let
+				    First = Date.StartOfYear(List.Min(Sales[Date])),
+				    Last = Date.EndOfYear(List.Max(Sales[Date])),
+				    DayCount = Duration.Days(Last - First) + 1,
+				    Dates = List.Dates(First, DayCount, #duration(1, 0, 0, 0)),
+				    ToTable = Table.FromList(Dates, Splitter.SplitByNothing(), {"Date"}),
+				    Typed = Table.TransformColumnTypes(ToTable, {{"Date", type date}}),
+				    Yr = Table.AddColumn(Typed, "Year", each Date.Year([Date]), Int64.Type),
+				    QNum = Table.AddColumn(Yr, "Quarter Number", each Date.QuarterOfYear([Date]), Int64.Type),
+				    Qtr = Table.AddColumn(QNum, "Quarter", each "Q" & Text.From([Quarter Number]), type text),
+				    MNum = Table.AddColumn(Qtr, "Month Number", each Date.Month([Date]), Int64.Type),
+				    MName = Table.AddColumn(MNum, "Month Name", each Date.ToText([Date], [Format="MMM", Culture="en-US"]), type text),
+				    MYear = Table.AddColumn(MName, "Month Year", each Date.ToText([Date], [Format="MMM yyyy", Culture="en-US"]), type text),
+				    MYSort = Table.AddColumn(MYear, "Month Year Sort", each [Year] * 100 + [Month Number], Int64.Type),
+				    DowNum = Table.AddColumn(MYSort, "Day of Week Number", each Date.DayOfWeek([Date], Day.Monday) + 1, Int64.Type),
+				    DowName = Table.AddColumn(DowNum, "Day of Week", each Date.ToText([Date], [Format="ddd", Culture="en-US"]), type text)
+				in
+				    DowName
+				```
+
+	annotation PBI_ResultType = Table

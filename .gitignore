@@ -1,0 +1,13 @@
+# Power BI Desktop local artifacts - per-user, per-machine, not shared.
+# Microsoft's guidance is to exclude localSettings.json from source control.
+.pbi/localSettings.json
+*.abf
+cache.abf
+
+# Desktop scratch and recovery files
+TempSaves/
+*.pbix.tmp
+
+# Python
+__pycache__/
+*.pyc

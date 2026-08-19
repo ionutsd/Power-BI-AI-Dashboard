@@ -1,0 +1,110 @@
+table Sales
+	lineageTag: 0a23844f-49d1-4000-835b-72a292720602
+
+	/// Total sales value.
+	measure 'Total Sales' = SUM(Sales[Amount])
+		formatString: \$#,0
+		lineageTag: 39d7bfb6-8ab3-4641-a9b4-a9573cfbca6d
+
+	/// Total boxes shipped.
+	measure 'Total Boxes' = SUM(Sales[Boxes Shipped])
+		formatString: #,0
+		lineageTag: 006ecec2-abbc-47bc-accd-41cf89aa87e7
+
+	/// Number of sales transactions.
+	measure 'Orders' = COUNTROWS(Sales)
+		formatString: #,0
+		lineageTag: 49579a0e-7124-4d03-960a-3d4618128b47
+
+	/// Total Sales divided by Orders.
+	measure 'Avg Order Value' = DIVIDE([Total Sales], [Orders])
+		formatString: \$#,0
+		lineageTag: 663a202d-8bc0-4846-ae16-db1d89d645a1
+
+	/// Revenue per box shipped.
+	measure 'Sales per Box' = DIVIDE([Total Sales], [Total Boxes])
+		formatString: \$#,0.00
+		lineageTag: 67549a24-7fbe-4e28-9b2f-56877e0b34b9
+
+	/// Total Sales for the same period one year earlier.
+	measure 'Sales PY' = CALCULATE([Total Sales], SAMEPERIODLASTYEAR('Calendar'[Date]))
+		formatString: \$#,0
+		lineageTag: a3b20c2b-806a-406c-8e80-504e6b540120
+
+	/// Year-over-year growth. Data ends 31 Aug 2024, so full-year 2024 vs 2023 is not like-for-like.
+	measure 'Sales YoY %' = DIVIDE([Total Sales] - [Sales PY], [Sales PY])
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: 7581b00c-eaaf-43ae-93af-947eb2689718
+
+	/// Year-to-date total sales.
+	measure 'Sales YTD' = TOTALYTD([Total Sales], 'Calendar'[Date])
+		formatString: \$#,0
+		lineageTag: 215ea2ae-bb81-48a7-a51c-b516ebd6e7af
+
+	column 'Sales Person'
+		dataType: string
+		lineageTag: 4a8fa7bb-0bd4-4f13-bbda-e6b2cec7b5ad
+		summarizeBy: none
+		sourceColumn: Sales Person
+
+		annotation SummarizationSetBy = Automatic
+
+	column Country
+		dataType: string
+		lineageTag: 2a4e63ac-83a5-4a0a-831a-b35535c64481
+		summarizeBy: none
+		sourceColumn: Country
+
+		annotation SummarizationSetBy = Automatic
+		annotation PBI_DataCategory = "Country"
+
+	column Product
+		dataType: string
+		lineageTag: 239a68ab-8ed6-47e8-acf0-df6dfc54321b
+		summarizeBy: none
+		sourceColumn: Product
+
+		annotation SummarizationSetBy = Automatic
+
+	column Date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: f8329303-b3b0-4ff1-87f8-6385dc5af6fb
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = Automatic
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Amount
+		dataType: double
+		formatString: \$#,0.00
+		lineageTag: ba86a59e-ddc1-40b0-986e-f6665e539bfb
+		summarizeBy: sum
+		sourceColumn: Amount
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Boxes Shipped'
+		dataType: int64
+		formatString: #,0
+		lineageTag: b4034a79-192d-4a81-bed2-9508bd12f9be
+		summarizeBy: sum
+		sourceColumn: Boxes Shipped
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Sales = m
+		mode: import
+		source = ```
+				let
+				    Source = Csv.Document(File.Contents("D:\CLAUDE_FOLDER\POWER BI\Chocolate SaleS.csv"),[Delimiter=",", Columns=6, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    CleanAmount = Table.TransformColumns(Headers, {{"Amount", each Number.FromText(Text.Remove(Text.From(_), {"$", ",", " "})), type number}}),
+				    TypedText = Table.TransformColumnTypes(CleanAmount, {{"Sales Person", type text}, {"Country", type text}, {"Product", type text}, {"Boxes Shipped", Int64.Type}}),
+				    TypedDate = Table.TransformColumnTypes(TypedText, {{"Date", type date}}, "en-GB")
+				in
+				    TypedDate
+				```
+
+	annotation PBI_ResultType = Table
